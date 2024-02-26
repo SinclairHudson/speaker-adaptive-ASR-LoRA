@@ -3,3 +3,6 @@ report/*.log
 report/*.out
 report/*.bbl
 report/*.blg
+report/*.fls
+report/*.synctex.gz
+report/*.fdb_latexmk
