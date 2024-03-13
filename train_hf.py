@@ -26,6 +26,8 @@ input_values = processor(audio_input, sampling_rate=sample_rate, return_tensors=
 lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj"])
 peft_model = get_peft_model(model, lora_config)
 
+peft_model_2 = get_peft_model(model, lora_config)
+
 # INFERENCE
 
 # retrieve logits & take argmax
@@ -44,6 +46,7 @@ with processor.as_target_processor():
   labels = processor(target_transcription, return_tensors="pt").input_ids
 
 optimizer = torch.optim.AdamW(peft_model.parameters(), lr=1e-4)
+optimizer_2 = torch.optim.AdamW(peft_model_2.parameters(), lr=1e-4)
 
 # this is good, we're only optimizing the lora here now
 for name, param in peft_model.named_parameters():
@@ -54,5 +57,13 @@ loss = peft_model(input_values, labels=labels).loss
 loss.backward()
 optimizer.step()
 optimizer.zero_grad()
+
+loss = peft_model_2(input_values, labels=labels).loss
+loss.backward()
+optimizer_2.step()
+optimizer_2.zero_grad()
+# this shares the base model, so that's epic!!!!
+
+breakpoint()
 
 # Look at model._modules["wav2vec2"].encoder.layers[1].attention.k_proj.weight.grad
