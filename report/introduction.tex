@@ -5,8 +5,18 @@ TODO
 
 As shown in figure \ref{fig:by_speaker}, word error rate varies by speaker, with some speakers having double the error rate when compared to others.
 
-\subsection{Speaker Disentanglement}
+\begin{figure}[h]
+      \centering
+      \includegraphics[width=0.4\textwidth]{figures/msr-vtt-length-histogram.png}
+      \caption{
+          Word Error Rate (WER) by speaker on LibriSpeech test-clean. 
+          Points are individual speakers, and the red line is the WER computed over the whole test-clean split.
+          Variance in WER increases as the number of utterances per speaker decreases.
+  }
+      \label{fig:by_speaker}
+\end{figure}
 
-The primary concern of speaker disentanglement is losing information relating to content.
-Instead of removing speaker information, this work explicitly models different speakers and adapts the model to the speaker.
+In this paper, we ask two research questions:
+1. Can we improve the performance of an ASR system by incorporating speaker identity information?
+2. Can an ASR system learn an explicit prior to improve performance on under-represented speakers?
 

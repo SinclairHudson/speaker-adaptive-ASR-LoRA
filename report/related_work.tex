@@ -6,14 +6,19 @@ TODO
 
 \subsection{Speaker Disentanglement}
 
+The primary concern of speaker disentanglement is losing information relating to content.
+Instead of removing speaker information, this work explicitly models different speakers and adapts the model to the speaker.
 Speaker disentanglement attempts to build representations that are invariant to speaker identity, while preserving information critical to content-related downstream tasks. 
 In this paper we take the opposite approach, explicitly modeling speaker identity in an attempt to improve performance on content-related tasks.
 
 
-\subsection{LoRA}
+\subsection{Low Rank Adaptation (LoRA)}
 
 TODO
 Further, LoRA weights are amenable to combination...
+
+This technique is directly applicable to ASR systems, as often the acoustic model is a transformer-based architecture with millions of parameters.
+
 
 \begin{figure}[h]
       \centering
