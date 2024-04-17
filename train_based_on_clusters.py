@@ -22,9 +22,9 @@ for k in range(K):
     cluster_dataset = full_dataset.filter(lambda x, indice: kmeans_assignment[indice] == k, with_indices=True)
     print(f"Cluster {k} has {len(cluster_dataset)} samples")
 
-    lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj"])
+    lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "projection"])
     print(f"training a single lora on cluster {k}")
-    trained_peft_model = train_single_lora(cluster_dataset, lora_config, base_model, hyperparams)
+    train_single_lora(cluster_dataset, lora_config, base_model, hyperparams)
 
 
 
