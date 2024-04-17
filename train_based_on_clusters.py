@@ -12,7 +12,7 @@ K=4
 
 hyperparams = Hyperparams()
 dataset_split = "train.clean.100"
-full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/media/sinclair/M1/huggingface/datasets")
+full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/media/sinclair/One Touch/huggingface/datasets")
 
 base_model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
 
