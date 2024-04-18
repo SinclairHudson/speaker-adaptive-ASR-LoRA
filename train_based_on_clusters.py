@@ -24,7 +24,7 @@ for k in range(K):
 
     lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "projection"])
     print(f"training a single lora on cluster {k}")
-    train_single_lora(cluster_dataset, lora_config, base_model, hyperparams)
+    train_single_lora(f"lora_cluster_{k}_of_{K}", cluster_dataset, lora_config, base_model, hyperparams)
 
 
 

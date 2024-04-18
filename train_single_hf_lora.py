@@ -3,7 +3,7 @@ import soundfile as sf
 import torch
 from datasets import load_dataset
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
-from peft import get_peft_model, LoraConfig
+from peft import get_peft_model, LoraConfig, PeftModel
 from dataclasses import dataclass
 from tqdm import tqdm
 import numpy as np
@@ -12,7 +12,7 @@ from hyperparams import Hyperparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def train_single_lora(dataset, lora_config: LoraConfig, base_model: Wav2Vec2ForCTC, hyperparams: Hyperparams):
+def train_single_lora(name: str, dataset, lora_config: LoraConfig, base_model: Wav2Vec2ForCTC, hyperparams: Hyperparams):
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
 
     def collate(batch):
@@ -31,14 +31,19 @@ def train_single_lora(dataset, lora_config: LoraConfig, base_model: Wav2Vec2ForC
 
     peft_model = get_peft_model(base_model, lora_config)
     peft_model.to(device)
+    # TODO can we make sure that we're only optimizing the trainable parameters?
     optim = torch.optim.Adam(peft_model.parameters(), lr=hyperparams.learning_rate)
-    # torch.set_num_threads(1)  # required for map, otherwise it hangs
-    # dataset_prepped = dataset.map(collate, batch_size=hyperparams.batch_size, batched=True, num_proc=4)
+
+    # split dataset into 10% validation and 90% training, shuffling first
+    # shuffling crashes my computer
+    # dataset = dataset.shuffle(seed=42)
+    val_size = len(dataset) // 10
 
     # training loop
     for epoch in range(hyperparams.num_epochs):
         accum_loss = 0
-        for i in tqdm(range(0, len(dataset), hyperparams.batch_size)):
+        # I know this splitting is scuffed but it's the only way to not run out of memory
+        for i in tqdm(range(0, len(dataset) - val_size, hyperparams.batch_size)):
             inputs = collate(dataset[i:i + hyperparams.batch_size])
             inputs = {k: v.to(device) for k, v in inputs.items()}
             model_output = peft_model(**inputs)
@@ -47,7 +52,24 @@ def train_single_lora(dataset, lora_config: LoraConfig, base_model: Wav2Vec2ForC
             optim.zero_grad()
             accum_loss += model_output.loss.item()
         print(f"Epoch {epoch} average_loss: {accum_loss/len(dataset)}")
-    # return peft_model
+
+        # validation loop
+        accum_loss = 0
+        true_val_size = 0
+        print("Validation")
+        with torch.no_grad():
+            for i in range(len(dataset) - val_size, len(dataset), hyperparams.batch_size):
+                true_val_size += hyperparams.batch_size
+                inputs = collate(dataset[i:i + hyperparams.batch_size])
+                inputs = {k: v.to(device) for k, v in inputs.items()}
+                model_output = peft_model(**inputs)
+                accum_loss += model_output.loss.item()
+        print("Validation loss: ", accum_loss/true_val_size)
+    print("Finished training")
+    # save the peft model
+    peft_model.save_pretrained(f"peft_models/{name}")
+    # loading it looks like this
+    # peft_model = PeftModel.from_pretrained(base_model, f"peft_models/{name}")
 
 def train_boring():
     from transformers import AutoProcessor
