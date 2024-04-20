@@ -40,12 +40,13 @@ class AttentionLoRA(torch.nn.Module):
         queries = outputs[-1] if isinstance(outputs, tuple) else outputs
         attention_weights = torch.nn.functional.softmax(torch.matmul(queries, self.keys.T) / sqrt(self.hidden_dim), dim=1)
         sd = self.template_peft_model.state_dict()
+        self.materialized_clones = []
         for name in self.param_dict:
             dupes_name = name.replace(".", "-") + "_dupes"
             # reduce by the attention weights, and then slam it into the actual model
             # this is going to be a [K] x [K x ? x ? ...] matmul
             # breakpoint()
-            K_para = self.get_parameter(clone_name)
+            K_para = self.get_parameter(dupes_name)
             materialized_clone = torch.sum(attention_weights * K_para.permute(1, 2, 0), dim=-1)
 
             sd[name].data = materialized_clone
@@ -56,7 +57,11 @@ class AttentionLoRA(torch.nn.Module):
         # peft model gets. after that. call torch.autograd.backward(materialized_clones, cloned_grads)
 
     def continue_gradients(self):
-        pass
+        grads = []
+        for name in self.param_dict:
+            realized_param = self.template_peft_model.get_parameter(name)
+            grads.append(realized_param.grad)
+        torch.autograd.backward(self.materialized_clones, grad_tensors=grads)
 
 
     def compute_pair_contrastive_loss(self):

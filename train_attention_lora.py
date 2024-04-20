@@ -27,9 +27,9 @@ def train_attention_lora():
     selector_params = [param for name, param in model.named_parameters() if "selector_network" in name]
     selector_optim = torch.optim.Adam(selector_params, lr=hp.selector_learning_rate)
 
-    cloned_parameters = [param for name, param in model.named_parameters() if "clone" in name]
+    cloned_parameters = [param for name, param in model.named_parameters() if "dupes" in name]
     cloned_optim = torch.optim.Adam(cloned_parameters, lr=hp.lora_clones_learning_rate)
-    for item in tqdm(training_dataset):
+    for i, item in enumerate(tqdm(training_dataset)):
 
         input_dict = processor(item["audio"]["array"],
                                  sampling_rate=item["audio"]["sampling_rate"],
@@ -39,10 +39,14 @@ def train_attention_lora():
         loss = model(input_dict.to(device)).loss
         loss += model.compute_pair_contrastive_loss()  # add loss so that keys don't collapse
         loss.backward()
-        breakpoint()
+        model.continue_gradients()
         cloned_optim.step()
         selector_optim.step()
         model.zero_grad()  # zeros more than just the cloned parameters
+        if i % 200 == 0:
+            print(f"Loss: {loss.item()}")
+            torch.save(model.state_dict(), "attention_lora.pt")
+        # model.load_state_dict(torch.load("attention_lora.pt"))
 
 if __name__ == "__main__":
     train_attention_lora()
