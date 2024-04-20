@@ -40,7 +40,7 @@ def compute_speaker_embedding(waveform):
 def compute_all_speaker_embeddings():
     # TODO could batch this?
     dataset_split = "train.clean.100"
-    full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/media/sinclair/M1/huggingface/datasets")
+    full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/media/sinclair/One Touch/huggingface/datasets")
     full_dataset_embeddings = np.zeros((0, 256))
     for item in tqdm(full_dataset):
         audio = item["audio"]["array"]
@@ -60,4 +60,5 @@ def cluster_speakers():
     np.save(f"data/kmeans_cluster_centers_{dataset_split}.npy", kmeans.cluster_centers_)
 
 if __name__ == "__main__":
-    cluster_speakers()
+    pass
+    # compute_all_speaker_embeddings()

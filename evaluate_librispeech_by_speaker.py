@@ -9,6 +9,7 @@ from evaluate import load
 import matplotlib.pyplot as plt
 from cluster_speakers import compute_speaker_embedding
 wer_metric = load("wer")
+from cluster_model import ClusterModel
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -22,6 +23,57 @@ full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/
 processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
 model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h").to(device)
 
+@torch.no_grad()
+def evaluate_base_model_unconditional():
+    preds = []
+    gts = []
+    for item in tqdm(full_dataset):
+        input_values = processor(item["audio"]["array"],
+                                 sampling_rate=item["audio"]["sampling_rate"],
+                                 return_tensors="pt").input_values
+
+        prediction = model(input_values.to(device))
+        pred_ids = np.argmax(prediction.logits.cpu(), axis=-1)
+        pred_str = processor.batch_decode(pred_ids)[0]
+        preds.append(pred_str)
+        gts.append(item["text"])
+    wer = wer_metric.compute(predictions=preds, references=gts)
+    print("over test set, base model averages WER: ", wer)
+
+@torch.no_grad()
+def evaluate_cluster_model_unconditional(K=4):
+    model = ClusterModel(K=K, device=device)
+    preds = []
+    gts = []
+    with torch.no_grad():
+        for item in tqdm(full_dataset):
+            pred_str = model(item)
+            preds.append(pred_str)
+            gts.append(item["text"])
+    wer = wer_metric.compute(predictions=preds, references=gts)
+    print("over test set, cluster model averages WER: ", wer)
+
+@torch.no_grad()
+def evaluate_cluster_model_per_speaker():
+    speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
+
+    data = np.zeros((0, 3))
+    model = ClusterModel(K=4, device=device)
+    for speaker_id in tqdm(speaker_ids):
+        speaker_dataset = full_dataset.filter(lambda x: x['speaker_id'] == speaker_id)
+        preds = []
+        gts = []
+        with torch.no_grad():
+            for item in tqdm(speaker_dataset):
+                pred_str = model(item)
+                preds.append(pred_str)
+                gts.append(item["text"])
+        wer = wer_metric.compute(predictions=preds, references=gts)
+        data = np.vstack((data, np.array([speaker_id, len(speaker_dataset), wer])))
+
+    np.save("data/librispeech_test_clean_cluster_model_by_speaker.npy", data)
+
+@torch.no_grad()
 def evaluate_per_speaker():
     speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
 
@@ -30,17 +82,16 @@ def evaluate_per_speaker():
         speaker_dataset = full_dataset.filter(lambda x: x['speaker_id'] == speaker_id)
         preds = []
         gts = []
-        with torch.no_grad():
-            for item in tqdm(speaker_dataset):
-                input_values = processor(item["audio"]["array"],
-                                         sampling_rate=item["audio"]["sampling_rate"],
-                                         return_tensors="pt").input_values
+        for item in tqdm(speaker_dataset):
+            input_values = processor(item["audio"]["array"],
+                                     sampling_rate=item["audio"]["sampling_rate"],
+                                     return_tensors="pt").input_values
 
-                prediction = model(input_values.to(device))
-                pred_ids = np.argmax(prediction.logits.cpu(), axis=-1)
-                pred_str = processor.batch_decode(pred_ids)[0]
-                preds.append(pred_str)
-                gts.append(item["text"])
+            prediction = model(input_values.to(device))
+            pred_ids = np.argmax(prediction.logits.cpu(), axis=-1)
+            pred_str = processor.batch_decode(pred_ids)[0]
+            preds.append(pred_str)
+            gts.append(item["text"])
         wer = wer_metric.compute(predictions=preds, references=gts)
         data = np.vstack((data, np.array([speaker_id, len(speaker_dataset), wer])))
 
@@ -51,11 +102,36 @@ def evaluate_per_speaker():
 # plot data on two axes as a scatter_plot
 def plot_num_instances_by_wer():
     data = np.load("data/librispeech_test_clean_by_speaker.npy")
-    print(data[:, 0])
     plt.scatter(data[:, 1], data[:, 2])
+    # plot average wer for stock model
+    plt.axhline(y=0.03383673158855752, color='b', linestyle='-')
+
+    cluster_model_data = np.load("data/librispeech_test_clean_cluster_model_by_speaker.npy")
+    plt.scatter(cluster_model_data[:, 1], cluster_model_data[:, 2], color='red')
+    # plot average wer for cluster model
+    plt.axhline(y=0.03585286062081558, color='r', linestyle='-')
+
+
     plt.xlabel("Number of data instances")
     plt.ylabel("Word Error Rate")
     plt.title("Librispeech test.clean by speaker")
+
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_changes():
+    data = np.load("data/librispeech_test_clean_by_speaker.npy")
+    cluster_model_data = np.load("data/librispeech_test_clean_cluster_model_by_speaker.npy")
+    assert np.all(data[:, :2] == cluster_model_data[:, :2])
+    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2])
+    # plot zero
+    plt.axhline(y=0, color='b', linestyle='-')
+
+    plt.xlabel("Number of data instances")
+    plt.ylabel("Change in Word Error Rate from base model to cluster model")
+    plt.title("Librispeech test.clean performance change by speaker")
+
     plt.tight_layout()
     plt.show()
 
@@ -89,7 +165,11 @@ def compute_average_purity():
 
 if __name__ == "__main__":
     # evaluate_per_speaker()
-    # plot_num_instances_by_wer()
     # assess_speaker_purity()
-    compute_average_purity()
+    # compute_average_purity()
+    # evaluate_cluster_model_per_speaker()
+    # plot_num_instances_by_wer()
+    # evaluate_cluster_model_unconditional()
+    # evaluate_base_model_unconditional()
+    plot_changes()
 
