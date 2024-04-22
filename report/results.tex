@@ -1,89 +1,28 @@
 \section{Results}
 
-\subsection{Video Retrieval}
-
 \begin{table}[htbp]
   \centering
-  \begin{tabular}{lccccccc}
+  \begin{tabular}{lc}
     \toprule
-    \textbf{Approach} &FS & Prompt & Triple & \multicolumn{3}{c}{\textbf{MSR-VTT} T2V} \\
-    \cmidrule(lr){5-7}
-                      &&&& \textbf{R@1} & \textbf{R@5} & \textbf{R@10} \\
+    \textbf{Model} &WER \\
     \midrule
-    CLIP4Clip \cite{clip4clip} &-&-&-& 0.445 & 0.714 &  0.816\\
+    Whisper Large V2 \cite{whisperv2} &2.7 \\
+    Wav2Vec 2.0 \cite{wav2vec2} &2.3??? \\
     \midrule
-    X-CLIP \cite{xclip} &-&-&-& 0.493 & 0.758 & 0.848 \\
-    \midrule
-    InternVideo \cite{internvideo} &-&-&-& 0.552 & - & - \\
+    AttentionLoRA(K=4) &TODO \\
+    ClusterModel(K=4) &TODO \\
+    ClusterModel(K=8) &TODO \\
     \bottomrule
-    VideoDescriptor + BiEnc &5strat&C& & 0.293 & 0.531 & 0.642 \\
-    \midrule
-    VideoDescriptor + BM25 &5strat&T& & 0.176 & 0.364 & 0.446 \\
   \end{tabular}
-  \caption{Performance comparison of the best VideoDescriptor configurations against other models on MSR-VTT T2V retrieval.}
-  \label{tab:model_comparison}
-\end{table}
-
-TODO
-
-\begin{table}[htbp]
-  \centering
-  \begin{tabular}{lccccccc}
-    \toprule
-    \textbf{Approach} &Frame Sampling & Prompt & Triplet? & \multicolumn{3}{c}{\textbf{MSR-VTT} T2V} \\
-    \cmidrule(lr){5-7}
-                      &&&& \textbf{R@1} & \textbf{R@5} & \textbf{R@10} \\
-    \midrule
-    VideoDescriptor + BiEnc &L1 greedy&V& & 0.215 & 0.439 & 0.544 \\
-    \midrule
-    VideoDescriptor + BiEnc &3strat&V& & 0.26 & 0.505 & 0.604 \\
-    \midrule
-    VideoDescriptor + BiEnc &3strat&C& & 0.276 & 0.494 & 0.598 \\
-    \midrule
-    VideoDescriptor + BiEnc &3strat&T& & 0.265 & 0.480 & 0.590 \\
-    \midrule
-    VideoDescriptor + BiEnc &3strat&V& \checkmark & 0.269 & 0.505 & 0.604 \\
-    \midrule
-    VideoDescriptor + BiEnc &3rand&V& & 0.282 & 0.490 & 0.596 \\
-    \midrule
-    VideoDescriptor + BiEnc &5strat&V& & 0.290 & 0.516 & 0.625 \\
-    \midrule
-    VideoDescriptor + BiEnc &5strat&C& & \textbf{0.293} & \textbf{0.531} & \textbf{0.642} \\
-    \midrule
-    VideoDescriptor + BiEnc &5strat&T& & 0.269 & 0.481 & 0.593 \\
-    \midrule
-    VideoDescriptor + BiEnc &5strat&V& \checkmark & 0.286 & 0.530 & 0.635 \\
-    \midrule
-    VideoDescriptor + BiEnc &5rand&V& & 0.272 & 0.476 & 0.604 \\
-    \bottomrule
-
-    VideoDescriptor + BM25 &L1 greedy&V& & 0.125 & 0.266 & 0.341 \\
-    \midrule
-    VideoDescriptor + BM25 &3strat&V& & 0.134 & 0.288 & 0.356 \\
-    \midrule
-    VideoDescriptor + BM25 &3strat&C& & 0.138 & 0.284 & 0.366 \\
-    \midrule
-    VideoDescriptor + BM25 &3strat&T& & 0.157 & 0.323 & 0.408 \\
-    \midrule
-    VideoDescriptor + BM25 &3strat&V& \checkmark & 0.122 & 0.277 & 0.347 \\
-    \midrule
-    VideoDescriptor + BM25 &3rand&V& & 0.142 & 0.280 & 0.340 \\
-    \midrule
-    VideoDescriptor + BM25 &5strat&V& & 0.167 & 0.326 & 0.411 \\
-    \midrule
-    VideoDescriptor + BM25 &5strat&C& & 0.150 & 0.331 & 0.417 \\
-    \midrule
-    VideoDescriptor + BM25 &5strat&T& & \textbf{0.176} & \textbf{0.364} & \textbf{0.446} \\
-    \midrule
-    VideoDescriptor + BM25 &5strat&V& \checkmark & 0.151 & 0.328 & 0.395 \\
-    \midrule
-    VideoDescriptor + BM25 &5rand&V& & 0.149 & 0.294 & 0.368 \\
-    \midrule
-  \end{tabular}
-  \caption{Performance of many VideoDescriptor configurations on MSR-VTT T2V retrieval.}
+  \caption{Word Error Rate (WER) of various models on the train.clean partition of LibriSpeech. Lower values indicate better performance.}
   \label{tab:video_descriptor_comparison}
 \end{table}
 
-\subsection{Qualitative Results on Video Summarization}
+Results are shown in Table \ref{tab:video_descriptor_comparison}.
 
-TODO
+\subsection{Per-Speaker Performance}
+
+Since the proposed AttentionLoRA and ClusterModel models are designed to be speaker-dependent,
+we provide a brief analysis on per-speaker performance to better understand these systems.
+
+Figure \ref{TODO} shows the change in WER by speaker, between the original base wav2vec 2.0 model and the ClusterModel(K=4) model.

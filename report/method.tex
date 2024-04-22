@@ -1,27 +1,60 @@
 \section{Method}
 
-TODO
-
-\begin{figure}[h]
-      \centering
-      \includegraphics[width=0.8\textwidth]{figures/pipeline.png}
-      \caption{High level block diagram of the proposed video understanding pipeline.}
-      \label{fig:pipeline}
-\end{figure}
-
-
+Below, we outline our two proposed systems. The first is an attempt to address \textbf{RQ1}, and the second is an attempt to address \textbf{RQ2}.
 
 \subsection{ASR by Speaker Clusters}
 
-\subsection{Learning Speaker Clusters}
+To improve the performance of an ASR system, we propose clustering speakers based on speaker identity features, 
+and then training a separate adapter models for each cluster.
+The idea is that each adapter will be able to specialize on the patterns of the speakers in that cluster, yielding better performance overall.
+At test time, the utterance is assigned a cluster and then the corresponding adapter model is used to transcribe the utterance.
+We call this approach the \textbf{ClusterModel}, and experiment with $K=4$ and $K=8$ clusters.
 
-TODO
+First, the training dataset is divided according to speaker features. To accomplish this, the pre-trained WeSpeaker \cite{wespeaker} speaker embedding model is used.
+All utterances in the \verb|train.clean.100| split of LibriSpeech \cite{librispeech} were embedded using the WeSpeaker model.
+The embeddings were then clustered using the K-means algorithm with $K$ clusters. 
+The centroid of each cluster is saved for inference.
+Each cluster was used to train a separate LoRA adapter on top of a frozen wav2vec 2.0 \cite{wav2vec2} model.
+per cluster, 10\% was held out for validation, since creating smaller, less noisy clusters makes the system particularly prone to overfitting.
+For the $K=4$ case, 1 or 2 epochs per cluster was sufficient to reach the minimal validation loss.
+
+At test time, the speaker embedding of the input utterance is computed using the WeSpeaker model.
+Then, the utterance is assigned to a cluster by finding the closest cluster centroid, based on euclidean distance.
+The corresponding LoRA adapter on top of the wav2vec 2.0 model is used to transcribe the utterance.
+See figure \ref{fig:clustermodel} for an overview of the ClusterModel system, both during training and inference.
+
+We define speaker purity as the percentage of utterances from a single speaker that map to the same cluster.
+In the \verb|test.clean| split of LibriSpeech, the speaker purity was 92\% on average with $K=4$ clusters.
+
+\begin{figure}[h]
+      \centering
+      \includegraphics[width=0.3\textwidth]{figures/clustermodel.png}
+      \caption{Block diagram of the ClusterModel($K=4$) training procedure (left), and inference procedure (right).}
+      \label{fig:clustermodel}
+\end{figure}
+
+\subsection{AttentionLoRA: Learning Speaker Clusters}
+
+The ClusterModel system is limited to cluster speakers based on the WeSpeaker embedding space.
+While this provides the system with a useful speaker identity prior, it is possible that a more helpful partitioning or classification of utterances exists.
+To create a model with the capacity to learn a more useful partitioning of the data, we propose the AttentionLoRA model.
+The AttentionLoRA model contains $K$ specialized LoRA adapters, which are fused by an attention mechanism based on a "selector network" that takes the utterance as input.
+This fused adapter is then attached to a frozen based model for improved inference.
+The selector model is initialized as the WeSpeaker speaker embedding model, but is fine-tuned during training.
+See Figure \ref{fig:attentionlora} for an overview of the AttentionLoRA system.
+
+
+Apart from the frozen base model, the AttentionLoRA model is trained end-to-end.
+The gradients that propogate to the merged LoRA can be propogated to the individual LoRAs, the key vectors, and the speaker embedding model.
+Additionally, a pairwise contrastive loss is added for the learned key vectors, to prevent the collapse of the key vectors to a single vector.
+This loss penalises high cosine similarity between each pair of key vectors.
 
 \begin{figure}
       \centering
-      \includegraphics[width=0.8\textwidth]{figures/num_frames_histogram.png}
-      \caption{Number of frames selected per video in the MSR-VTT dataset retrieval split when using greedy L1 selection, for different thresholds.}
-      \label{fig:optical_flow}
+      \includegraphics[width=0.3\textwidth]{figures/attentionlora.png}
+      \caption{AttentionLoRA model architecture. A speaker embedding model is used to generate a query vector.
+      That query vector is used to attend over the different LoRAs of the model, producing a merged LoRA which is attached to the frozen base model before end-to-end ASR inference.}
+      \label{fig:attentionlora}
 \end{figure}
 
 TODO
