@@ -52,13 +52,13 @@ def compute_all_speaker_embeddings():
 
 def cluster_speakers():
     dataset_split = "train.clean.100"
+    K = 8
     embeddings = np.load(f"data/full_dataset_embeddings_{dataset_split}.npy")
-    K = 4
     kmeans = KMeans(n_clusters=K, random_state=0).fit(embeddings)
-    breakpoint()
-    np.save(f"data/kmeans_assignment_{dataset_split}.npy", kmeans.labels_)
-    np.save(f"data/kmeans_cluster_centers_{dataset_split}.npy", kmeans.cluster_centers_)
+    np.save(f"data/kmeans_assignment_{dataset_split}_K={K}.npy", kmeans.labels_)
+    np.save(f"data/kmeans_cluster_centers_{dataset_split}_K={K}.npy", kmeans.cluster_centers_)
 
 if __name__ == "__main__":
-    pass
+    cluster_speakers()
     # compute_all_speaker_embeddings()
+    # pass

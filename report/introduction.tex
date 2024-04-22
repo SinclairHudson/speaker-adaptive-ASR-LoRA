@@ -1,28 +1,29 @@
 \section{Introduction}
 
-TODO
-
 Recently, automatic speech recognition (ASR) systems have achieved impressive results benchmark datasets such as LibriSpeech \cite{librispeech} and TIMIT \cite{timit}.
 These systems are typically trained first in an unsupervised manner on a large corpus of audio data, and then fine-tuned on a smaller supervised dataset \cite{wav2vec2, TODO}.
-Both the unsupervised and supervised training data contain a wide variety of speakers.
+Both the unsupervised and supervised training data contain a wide variety of speakers, with all speakers treated equally during training.
 \subsection{Motivation}
 
-As shown in figure \ref{fig:by_speaker}, word error rate varies by speaker, with some speakers having double the error rate when compared to others.
-This 
+During testing, the performance of these systems can vary significantly depending on the speaker.
+As shown in Figure \ref{fig:by_speaker}, word error rate with some speakers having double the Word Error Rate (WER) when compared to others.
+These variations could be attributed to the different speaking styles, accents, or recording conditions of the speakers.
 
 \begin{figure}[h]
       \centering
-      \includegraphics[width=0.4\textwidth]{figures/msr-vtt-length-histogram.png}
+      \includegraphics[width=0.45\textwidth]{figures/wer_by_speaker.png}
       \caption{
-          Word Error Rate (WER) of by speaker on LibriSpeech test-clean. 
-          Results are based on the Wav2Vec 2.0 model \cite{wav2vec2}.
-          Points are individual speakers, and the red line is the WER computed over the whole test-clean split.
+          Word Error Rate (WER) of wav2vec 2.0 by speaker on LibriSpeech test-clean.
+          The horizontal blue line represents the average WER across all speakers.
           Variance in WER increases as the number of utterances per speaker decreases.
   }
       \label{fig:by_speaker}
 \end{figure}
 
+As shown in the work of \cite{childspeech}, when a pre-trained model's performance performs poorly on a specific type of speaker, 
+it is possible to improve performance by fine-tuning the model on data instances from that specific type of speaker.
+This leads us to the hypothesis that speaker-dependent models can outperform speaker-independent models on a per-speaker basis.
 In this paper, we explore two research questions:
 \textbf{RQ1}: Can we improve the performance of an ASR system by incorporating speaker identity information?
-\textbf{RQ2}: Can an ASR system learn an explicit prior to improve performance on under-represented speakers?
+\textbf{RQ2}: Can an ASR system learn modes of the data and model them independently, to improve performance both on average and in under-represented modes?
 

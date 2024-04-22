@@ -15,7 +15,7 @@ class ClusterModel():
             peft_model = PeftModel.from_pretrained(self.base_model, f"peft_models/lora_cluster_{k}_of_{K}")
             self.peft_models.append(peft_model.to(device))
 
-        self.cluster_centers = np.load(f"data/kmeans_cluster_centers_train.clean.100.npy")
+        self.cluster_centers = np.load(f"data/kmeans_cluster_centers_train.clean.100_K={K}.npy")
         assert len(self.cluster_centers) == K
         print(f"ClusterModel initialized with {K} clusters, on device {device}")
 

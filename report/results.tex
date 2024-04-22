@@ -4,17 +4,17 @@
   \centering
   \begin{tabular}{lc}
     \toprule
-    \textbf{Model} &WER \\
+    \textbf{Model} &WER (no LM)\\
     \midrule
-    Whisper Large V2 \cite{whisperv2} &2.7 \\
-    Wav2Vec 2.0 \cite{wav2vec2} &2.3??? \\
+    Whisper Large V2 \cite{whisperv2} &2.7* \\
     \midrule
-    AttentionLoRA(K=4) &TODO \\
-    ClusterModel(K=4) &TODO \\
-    ClusterModel(K=8) &TODO \\
+    Wav2Vec 2.0 \cite{wav2vec2} HuggingFace &3.384 \\
+    ClusterModel(K=4) & 3.585 \\
+    ClusterModel(K=8) & 3.608 \\
+    AttentionLoRA(K=4) & - \\
     \bottomrule
   \end{tabular}
-  \caption{Word Error Rate (WER) of various models on the train.clean partition of LibriSpeech. Lower values indicate better performance.}
+  \caption{Word Error Rate (WER) of various models on the test.clean partition of LibriSpeech. Lower values indicate better performance. A * indicates that the result was reported by a different paper.}
   \label{tab:video_descriptor_comparison}
 \end{table}
 
@@ -24,5 +24,15 @@ Results are shown in Table \ref{tab:video_descriptor_comparison}.
 
 Since the proposed AttentionLoRA and ClusterModel models are designed to be speaker-dependent,
 we provide a brief analysis on per-speaker performance to better understand these systems.
+
+\begin{figure}[h]
+      \centering
+      \includegraphics[width=0.45\textwidth]{figures/wer_delta.png}
+      \caption{Difference in WER between ClusterModels and Wav2Vec 2.0 by speaker on LibriSpeech test-clean.
+        Blue dots are the ClusterModel with $K=4$, and orange dots are the ClusterModel with $K=8$.
+      The horizontal blue line represents 0, no difference in WER.}
+      \label{fig:wer_delta}
+\end{figure}
+
 
 Figure \ref{TODO} shows the change in WER by speaker, between the original base wav2vec 2.0 model and the ClusterModel(K=4) model.

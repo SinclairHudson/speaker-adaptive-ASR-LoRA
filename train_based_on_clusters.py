@@ -6,17 +6,17 @@ import numpy as np
 from train_single_hf_lora import train_single_lora
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 from peft import LoraConfig
-from hyperparams import Hyperparams
+from hyperparams import HyperparamsK8
 
-K=4
+K=8
 
-hyperparams = Hyperparams()
+hyperparams = HyperparamsK8()
 dataset_split = "train.clean.100"
 full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/media/sinclair/One Touch/huggingface/datasets")
 
 base_model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
 
-kmeans_assignment = np.load(f"data/kmeans_assignment_{dataset_split}.npy")
+kmeans_assignment = np.load(f"data/kmeans_assignment_{dataset_split}_K={K}.npy")
 
 for k in range(K):
     cluster_dataset = full_dataset.filter(lambda x, indice: kmeans_assignment[indice] == k, with_indices=True)

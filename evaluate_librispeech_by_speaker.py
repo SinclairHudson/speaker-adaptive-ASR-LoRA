@@ -10,6 +10,17 @@ import matplotlib.pyplot as plt
 from cluster_speakers import compute_speaker_embedding
 wer_metric = load("wer")
 from cluster_model import ClusterModel
+from attention_lora import AttentionLoRA
+from peft import LoraConfig
+import wespeaker
+
+import matplotlib
+
+font = {
+    'size'   : 20
+        }
+
+matplotlib.rc('font', **font)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -20,13 +31,40 @@ full_dataset = load_dataset('librispeech_asr', split=dataset_split, cache_dir="/
 # filtered_dataset = full_dataset.filter(lambda x: x['speaker_id'] == 6930)  # only evaluate on one speaker
 
 # breakpoint()
-processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
-model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h").to(device)
+
+@torch.no_grad()
+def evaluate_attentionLoRA_unconditional():
+    preds = []
+    gts = []
+    base_model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+    processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+    lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "projection"])
+
+    select_net = wespeaker.load_model("english")
+    select_net = select_net.model.to(device)
+    model = AttentionLoRA(K=4, base_model=base_model, selector_network=select_net,
+                          lora_config=lora_config, hidden_dim=256).to(device)
+    model.load_state_dict(torch.load("attention_lora.pt"))
+
+    for item in tqdm(full_dataset):
+        input_dict = processor(item["audio"]["array"],
+                                 sampling_rate=item["audio"]["sampling_rate"],
+                                 text=item["text"],
+                                 return_tensors="pt")
+        prediction = model(input_dict.to(device))
+        pred_ids = np.argmax(prediction.logits.cpu(), axis=-1)
+        pred_str = processor.batch_decode(pred_ids)[0]
+        preds.append(pred_str)
+        gts.append(item["text"])
+    wer = wer_metric.compute(predictions=preds, references=gts)
+    print("over test set, base model averages WER: ", wer)
 
 @torch.no_grad()
 def evaluate_base_model_unconditional():
     preds = []
     gts = []
+    processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+    model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h").to(device)
     for item in tqdm(full_dataset):
         input_values = processor(item["audio"]["array"],
                                  sampling_rate=item["audio"]["sampling_rate"],
@@ -54,11 +92,11 @@ def evaluate_cluster_model_unconditional(K=4):
     print("over test set, cluster model averages WER: ", wer)
 
 @torch.no_grad()
-def evaluate_cluster_model_per_speaker():
+def evaluate_cluster_model_per_speaker(K=4):
     speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
 
     data = np.zeros((0, 3))
-    model = ClusterModel(K=4, device=device)
+    model = ClusterModel(K=K, device=device)
     for speaker_id in tqdm(speaker_ids):
         speaker_dataset = full_dataset.filter(lambda x: x['speaker_id'] == speaker_id)
         preds = []
@@ -71,7 +109,7 @@ def evaluate_cluster_model_per_speaker():
         wer = wer_metric.compute(predictions=preds, references=gts)
         data = np.vstack((data, np.array([speaker_id, len(speaker_dataset), wer])))
 
-    np.save("data/librispeech_test_clean_cluster_model_by_speaker.npy", data)
+    np.save(f"data/librispeech_test_clean_cluster_model_by_speaker_K={K}.npy", data)
 
 @torch.no_grad()
 def evaluate_per_speaker():
@@ -106,31 +144,36 @@ def plot_num_instances_by_wer():
     # plot average wer for stock model
     plt.axhline(y=0.03383673158855752, color='b', linestyle='-')
 
-    cluster_model_data = np.load("data/librispeech_test_clean_cluster_model_by_speaker.npy")
-    plt.scatter(cluster_model_data[:, 1], cluster_model_data[:, 2], color='red')
+    # cluster_model_data = np.load("data/librispeech_test_clean_cluster_model_by_speaker.npy")
+    # plt.scatter(cluster_model_data[:, 1], cluster_model_data[:, 2], color='red')
     # plot average wer for cluster model
-    plt.axhline(y=0.03585286062081558, color='r', linestyle='-')
+    # plt.axhline(y=0.03585286062081558, color='r', linestyle='-')
 
 
     plt.xlabel("Number of data instances")
-    plt.ylabel("Word Error Rate")
-    plt.title("Librispeech test.clean by speaker")
+    plt.ylabel("Word Error Rate (WER)")
+    plt.title("LibriSpeech test.clean by Speaker")
 
 
     plt.tight_layout()
     plt.show()
 
-def plot_changes():
+def plot_changes(K=4):
     data = np.load("data/librispeech_test_clean_by_speaker.npy")
-    cluster_model_data = np.load("data/librispeech_test_clean_cluster_model_by_speaker.npy")
+    cluster_model_data = np.load(f"data/librispeech_test_clean_cluster_model_by_speaker_K={4}.npy")
+    assert np.all(data[:, :2] == cluster_model_data[:, :2])
+    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2])
+
+    data = np.load("data/librispeech_test_clean_by_speaker.npy")
+    cluster_model_data = np.load(f"data/librispeech_test_clean_cluster_model_by_speaker_K={8}.npy")
     assert np.all(data[:, :2] == cluster_model_data[:, :2])
     plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2])
     # plot zero
     plt.axhline(y=0, color='b', linestyle='-')
 
     plt.xlabel("Number of data instances")
-    plt.ylabel("Change in Word Error Rate from base model to cluster model")
-    plt.title("Librispeech test.clean performance change by speaker")
+    plt.ylabel("Word Error Rate change")
+    plt.title(f"Librispeech test.clean performance change between base model and ClusterModels, per-speaker")
 
     plt.tight_layout()
     plt.show()
@@ -169,7 +212,10 @@ if __name__ == "__main__":
     # compute_average_purity()
     # evaluate_cluster_model_per_speaker()
     # plot_num_instances_by_wer()
-    # evaluate_cluster_model_unconditional()
+    # evaluate_cluster_model_unconditional(K=8)
+
+    # evaluate_cluster_model_per_speaker(K=8)
     # evaluate_base_model_unconditional()
-    plot_changes()
+    plot_changes(K=8)
+    # plot_num_instances_by_wer()
 

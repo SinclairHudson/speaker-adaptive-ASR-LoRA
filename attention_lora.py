@@ -72,7 +72,7 @@ class AttentionLoRA(torch.nn.Module):
         # Exclude diagonal elements (self-similarity)
         pairwise_loss_matrix.fill_diagonal_(0)
         # Compute total loss
-        total_loss = torch.sum(pairwise_loss_matrix)
+        total_loss = torch.mean(pairwise_loss_matrix)
         return total_loss
 
 
