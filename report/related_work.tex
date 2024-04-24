@@ -1,33 +1,39 @@
 \section{Related Work}
 
-Below, we outline three important areas of related work, which are necessary to understand the context of our work.
+Below, we outline three important areas of related work, which are necessary context to understand our work.
 
 \subsection{Low-Rank Adaptation (LoRA)}
 
 This work makes use of the Low-Rank Adaptation (LoRA) technique to improve the performance of large pre-trained ASR models.
-LoRA is a parameter-efficient method for adapting a pre-trained model to a new task or domain \cite{lora}.
-It functions by injecting trainable rank decomposition matrices into the model's weights, which are learned while the base model's weights are frozen.
+LoRA \cite{lora} is a parameter-efficient method for adapting a pre-trained model to a new task or domain.
+It functions by injecting trainable rank decomposition matrices into the model's weights, which are learned while the base model's weights are frozen \cite{lora}.
 This greatly reduces the number of parameters that need to be learned, while still benefiting from base model's pre-training.
-While originally applied to large language models \cite{lora}, the LoRA technique is directly applicable to acoustic models in ASR that use transformer layers, such as wav2vec 2.0 and HuBERT \cite{wav2vec2, hubert}.
-that use Transformer \cite{transformer} layers.
+While originally applied to large language models \cite{lora}, the LoRA technique is directly applicable to acoustic models in ASR that use transformer \cite{transformer} layers, such as wav2vec 2.0 and HuBERT \cite{wav2vec2, hubert}.
+As noted in Section \ref{sec:introduction}, the parameter counts of acoustic models in ASR have been growing rapidly.
+This makes direct fine-tuning infeasible for many researchers and applications, and motivates the use of parameter-efficient fine-tuning techniques like LoRA.
 Once trained, LoRA weights are amenable to combination with the base model; the weights can simply be added to the base model's weights.
-Complementary to this work, Yu et. al explore applying LoRA adapters to language models for re-scoring acoustic model outputs \cite{loraonlm}.
-
-\subsection{Speaker-Adaptive ASR}
-
-Speaker-Adaptive ASR systems aim to improve the performance of an ASR system by incorporating speaker identity information \cite{speakeradaptation}.
-Similar to this work, \cite{childspeech} has successfully applied LoRA methods to improve the ASR performance of the Whisper \cite{whisper} acoustic model on a low-resource language.
-\cite{speakeradaptation}
-
+Complementary to this work, Yu et al. explore applying LoRA adapters to language models for re-scoring acoustic model outputs \cite{loraonlm}.
 
 \subsection{Speaker Disentanglement}
 
 Speaker disentanglement attempts to build representations that are invariant to speaker identity, while preserving information critical to content-related downstream tasks.
-Emprically, representations learned via self-supervised learning (SSL) perform extremely well on content-related tasks as well as speaker-related tasks such as speaker identification.
-This can be seen on the SUPERB benchmark \cite{}, where representations produced by models such as wav2vec 2.0 and HuBERT \cite{wav2vec2, hubert} perform very well on both speaker identification and content-related tasks such as ASR.
+%Emprically, representations learned via self-supervised learning (SSL) perform extremely well on content-related tasks as well as speaker-related tasks such as speaker identification.
+As seen on the SUPERB benchmark \cite{superb}, representations produced by models such as wav2vec 2.0 and HuBERT perform very well on both speaker identification and content-related tasks such as ASR \cite{wav2vec2, hubert}.
 These results imply that these learned representations contain both content and speaker information, the latter of which is not useful for tasks such as ASR.
-Systems such as ContentVec \cite{contentvec} and SPIN \cite{spin} attempt to remove speaker information from learned representations, while preserving content information.
-By removing speaker-related information, these systems successfully improve performance of these representations on downstream tasks such as ASR and TODO \cite{contentvec, spin}.
-TODO .... content loss, what's the problem with speaker disentanglement?
-In this paper we take the opposite approach, explicitly modeling speaker identity in an attempt to improve performance on content-related tasks.
-Instead of removing speaker information, this work explicitly models different speakers and adapts the model to the speaker.
+Systems such as ContentVec \cite{contentvec} and Spin \cite{spin} attempt to remove speaker information from learned representations, while preserving content information.
+By removing speaker-related information, these systems successfully improve performance of these representations on downstream tasks such as ASR, phoneme recognition, and intent classification \cite{contentvec, spin}.
+The principal concern with speaker disentanglement is that it may remove useful content information from the representations, not just speaker information.
+This problem is known as \textit{content loss}, and is a major challenge in speaker disentanglement because it can reduce downstream performance \cite{contentvec, choi2021neural}.
+In this paper we take the opposite approach to speaker disentanglement, explicitly modeling speaker identity in an attempt to improve performance on content-related tasks.
+
+\subsection{Speaker-Adaptive ASR}
+
+Speaker-Adaptive ASR systems aim to improve the performance of an ASR system by incorporating speaker identity information \cite{speakeradaptation, onlinesaasr}.
+Intuitively, different speakers have different speech patterns, and a model that can adapt to these patterns should be able to improve performance.
+Speaker-Adaptive ASR has been explored in an online-learning setting \cite{onlinesaasr}, and with LSTMs \cite{speakeradaptationlstm}.
+Most similar to this work, \cite{childspeech} has successfully applied LoRA methods to improve the ASR performance of the Whisper \cite{whisper} acoustic model on a low-resource language.
+%There have also been works that use LoRAs to fine-tune language models for transcription rescoring \cite{loraonlm}.
+
+
+
+

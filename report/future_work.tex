@@ -1,12 +1,22 @@
-\section{Threats to Validity and Future Work}
+\section{Threats to Validity}
 
-These results are quite preliminary, and there are many avenues for future work.
 % Threats to validity
+The results presented are preliminary, and require additional effort to show significance.
 These results are based on a single dataset, LibriSpeech, and a single base model, wav2vec 2.0.
+Expanding the experiments to more datasets and more models would provide a more comprehensive understanding of the proposed methods.
 Extensive hyperparameter searches were not performed, which could provide improved performance.
 
 
 % Future work
-While the proposed AttentionLoRA model does not show good performance, similar ideas such as Mixture of Experts (MoE) models have shown great promise in language modelling tasks \cite{shazeer2017outrageously}.
-Mixtor of Experts could be adapted to the ASR task.
+\section{Future Work}
+In addition, the proposed methods and experiments could be extended and improved in several ways.
+AttentionLoRA remains slow to train and prone to divergence; futher engineering iterations are needed to make it efficient to train.
+Additionally, all experiments only used the \verb|train-clean-100| partition of LibriSpeech, and the methods could benefit from training on the full dataset.
+This is especially true of the ClusterModel, where overfitting of the individual adapters is a primary concern.
+It may also be worthwhile to explore adapters operating on the very first few layers of the wav2vec 2.0 model, as these layers are closest to the audio input and so may be more sensitive to speaker identity.
+There are also additional model architectures and methods that could be explored, towards the same goal of speaker-conditional ASR.
+Recently, Mixture of Experts (MoE) models have been shown to be effective in language models \cite{shazeer2017outrageously}.
+MoE shares some resemblance to AttentionLoRA, and could also be adapted to the ASR task.
+Finally, it would be interesting to repeat these experiments with models trained on speaker-disentangled representations. 
+This would allow us to determine if speaker-disentangled representations mitigate the performance variations across speakers in ASR benchmarks.
 

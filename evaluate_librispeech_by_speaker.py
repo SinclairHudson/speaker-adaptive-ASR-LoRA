@@ -45,6 +45,7 @@ def evaluate_attentionLoRA_unconditional():
     model = AttentionLoRA(K=4, base_model=base_model, selector_network=select_net,
                           lora_config=lora_config, hidden_dim=256).to(device)
     model.load_state_dict(torch.load("attention_lora.pt"))
+    model.eval()
 
     for item in tqdm(full_dataset):
         input_dict = processor(item["audio"]["array"],
@@ -112,7 +113,7 @@ def evaluate_cluster_model_per_speaker(K=4):
     np.save(f"data/librispeech_test_clean_cluster_model_by_speaker_K={K}.npy", data)
 
 @torch.no_grad()
-def evaluate_per_speaker():
+def evaluate_base_model_per_speaker():
     speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
 
     data = np.zeros((0, 3))
@@ -136,11 +137,46 @@ def evaluate_per_speaker():
 
     np.save("data/librispeech_test_clean_by_speaker.npy", data)
 
+@torch.no_grad()
+def evaluate_attentionLoRA_per_speaker():
+    speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
+    base_model = Wav2Vec2ForCTC.from_pretrained("facebook/wav2vec2-base-960h")
+    processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base-960h")
+    lora_config = LoraConfig(init_lora_weights="gaussian", target_modules=["k_proj", "q_proj", "v_proj", "out_proj", "projection"])
+
+    select_net = wespeaker.load_model("english")
+    select_net = select_net.model.to(device)
+    model = AttentionLoRA(K=4, base_model=base_model, selector_network=select_net,
+                          lora_config=lora_config, hidden_dim=256).to(device)
+    model.load_state_dict(torch.load("attention_lora.pt"))
+    model.eval()
+
+    data = np.zeros((0, 3))
+    for speaker_id in tqdm(speaker_ids):
+        speaker_dataset = full_dataset.filter(lambda x: x['speaker_id'] == speaker_id)
+        preds = []
+        gts = []
+        for item in tqdm(speaker_dataset):
+            input_dict = processor(item["audio"]["array"],
+                                     sampling_rate=item["audio"]["sampling_rate"],
+                                     text=item["text"],
+                                     return_tensors="pt")
+            prediction = model(input_dict.to(device))
+            pred_ids = np.argmax(prediction.logits.cpu(), axis=-1)
+            pred_str = processor.batch_decode(pred_ids)[0]
+            preds.append(pred_str)
+            gts.append(item["text"])
+        wer = wer_metric.compute(predictions=preds, references=gts)
+        data = np.vstack((data, np.array([speaker_id, len(speaker_dataset), wer])))
+
+
+    np.save("data/librispeech_test_clean_by_speaker_attentionLoRA.npy", data)
+
 
 # plot data on two axes as a scatter_plot
 def plot_num_instances_by_wer():
     data = np.load("data/librispeech_test_clean_by_speaker.npy")
-    plt.scatter(data[:, 1], data[:, 2])
+    plt.scatter(data[:, 1], data[:, 2], s=75)
     # plot average wer for stock model
     plt.axhline(y=0.03383673158855752, color='b', linestyle='-')
 
@@ -152,22 +188,30 @@ def plot_num_instances_by_wer():
 
     plt.xlabel("Number of data instances")
     plt.ylabel("Word Error Rate (WER)")
-    plt.title("LibriSpeech test.clean by Speaker")
+    plt.title("LibriSpeech test.clean by speaker")
 
 
     plt.tight_layout()
     plt.show()
 
-def plot_changes(K=4):
+def plot_changes():
     data = np.load("data/librispeech_test_clean_by_speaker.npy")
+
     cluster_model_data = np.load(f"data/librispeech_test_clean_cluster_model_by_speaker_K={4}.npy")
     assert np.all(data[:, :2] == cluster_model_data[:, :2])
-    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2])
+    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2], s=70)
 
-    data = np.load("data/librispeech_test_clean_by_speaker.npy")
     cluster_model_data = np.load(f"data/librispeech_test_clean_cluster_model_by_speaker_K={8}.npy")
     assert np.all(data[:, :2] == cluster_model_data[:, :2])
-    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2])
+    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2], s=70)
+
+    cluster_model_data = np.load(f"data/librispeech_test_clean_cluster_model_by_speaker_K={12}.npy")
+    assert np.all(data[:, :2] == cluster_model_data[:, :2])
+    plt.scatter(data[:, 1], cluster_model_data[:, 2] - data[:, 2], s=70)
+
+    # make legend
+    plt.legend(["K=4", "K=8", "K=12"])
+
     # plot zero
     plt.axhline(y=0, color='b', linestyle='-')
 
@@ -179,10 +223,9 @@ def plot_changes(K=4):
     plt.show()
 
 @torch.no_grad()
-def assess_speaker_purity():
-    K=4
+def assess_speaker_purity(K=4):
     speaker_ids = np.load("data/librispeech_test_clean_speaker_ids.npy")
-    cluster_centres = np.load("data/kmeans_cluster_centers_train.clean.100.npy")
+    cluster_centres = np.load(f"data/kmeans_cluster_centers_train.clean.100_K={K}.npy")
 
     cluster_distributions = np.zeros((len(speaker_ids), K))
     for speaker_ind, speaker_id in enumerate(tqdm(speaker_ids)):
@@ -200,11 +243,14 @@ def assess_speaker_purity():
         cluster_distributions[speaker_ind] /= np.sum(cluster_distributions[speaker_ind])
         print(cluster_distributions[speaker_ind])
 
-    np.save("data/librispeech_test_clean_speaker_purity.npy", cluster_distributions)
+    np.save(f"data/librispeech_test_clean_speaker_purity_K={K}.npy", cluster_distributions)
 
-def compute_average_purity():
-    purity = np.load("data/librispeech_test_clean_speaker_purity.npy")
-    print(np.mean(np.max(purity, axis=1)))
+def compute_average_purity(K=8):
+    purity = np.load(f"data/librispeech_test_clean_speaker_purity_K={K}.npy")
+    print(f"average purity: {np.mean(np.max(purity, axis=1))}")
+    # count how many rows have a 1 in them:
+    print(f"number of perfectly pure speakers: {np.sum(np.max(purity, axis=1) == 1)}/{len(purity)}")
+
 
 if __name__ == "__main__":
     # evaluate_per_speaker()
@@ -212,10 +258,16 @@ if __name__ == "__main__":
     # compute_average_purity()
     # evaluate_cluster_model_per_speaker()
     # plot_num_instances_by_wer()
-    # evaluate_cluster_model_unconditional(K=8)
+    # evaluate_attentionLoRA_unconditional()
+    # evaluate_attentionLoRA_per_speaker()
+    # evaluate_cluster_model_unconditional(K=12)
 
-    # evaluate_cluster_model_per_speaker(K=8)
+    # evaluate_cluster_model_per_speaker(K=12)
     # evaluate_base_model_unconditional()
-    plot_changes(K=8)
+    # assess_speaker_purity(K=4)
+    # compute_average_purity(K=4)
+    # assess_speaker_purity(K=12)
+    # compute_average_purity(K=12)
     # plot_num_instances_by_wer()
-
+    # plot_changes()
+    plot_num_instances_by_wer()

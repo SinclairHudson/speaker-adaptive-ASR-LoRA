@@ -1,12 +1,11 @@
 % the abstract here must exactly match the abstract entered into the paper submission system
 \begin{abstract}
     % 5 sentences. 2 scope, two contribution
-    Automatic Speech Recognition (ASR) systems are a very mature 
-    
     % 1000 characters. ASCII characters only. No citations.
-    In this work, we explore if ASR systems can benefit from a speaker identity prior,
-    adapting their weights based on speaker information.
-    We demonstrate that ASR system that is more performant for all speakers, 
-    but specifically speakers that are under-represented in popular open-source datasets.
+    Automatic Speech Recognition (ASR) systems are a very mature, with large models achieving low error rates on modern benchmarks, even without a language model to refine transcriptions.
+    Despite this excellent performance, there are still some speakers in benchmark datasets that prove more difficult than others, with error rates 50\% higher than the average.
+    In this work, we explore if ASR acoustic models can benefit from a speaker identity prior, adapting their weights based on speaker embeddings.
+    We demonstrate that while unconditional models provide better performance on average, speaker-conditional models can improve performance slightly on some speakers.
+    Further, we propose a novel model architecture, AttentionLoRA, which is designed to jointly learn modes of the speech data as well as mode-specific parameters.
 \end{abstract}
 

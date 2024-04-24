@@ -6,33 +6,76 @@
     \toprule
     \textbf{Model} &WER (no LM)\\
     \midrule
-    Whisper Large V2 \cite{whisperv2} &2.7* \\
+    Whisper Large V2 \cite{whisper} &2.7 \\
+    ContextNet(L) \cite{contextnet} & 2.1 \\
+    Gen3 Conformer XLL+ \cite{conformerxll} & 1.5 \\
     \midrule
     Wav2Vec 2.0 \cite{wav2vec2} HuggingFace &3.384 \\
     ClusterModel(K=4) & 3.585 \\
     ClusterModel(K=8) & 3.608 \\
+    ClusterModel(K=12) & 3.650 \\
     AttentionLoRA(K=4) & - \\
     \bottomrule
   \end{tabular}
-  \caption{Word Error Rate (WER) of various models on the test.clean partition of LibriSpeech. Lower values indicate better performance. A * indicates that the result was reported by a different paper.}
+  \caption{
+    Word Error Rate (WER) of various models on the test-clean partition of LibriSpeech.
+    Lower values indicate better performance. 
+    The top section shows the performance of state-of-the-art acoustic models, using results reported by other papers.
+    }
   \label{tab:video_descriptor_comparison}
 \end{table}
 
 Results are shown in Table \ref{tab:video_descriptor_comparison}.
+Overall, the ClusterModels seem to increase WER slightly, over the whole test set.
+The AttentionLoRA model was not able to be trained to completion, diverging completely or minimizing the LoRA weights.
+Minimizing the LoRA weights effectively disabled the adapters and turned the model into an unmodified wav2vec 2.0 model.
+As such, results for the AttentionLoRA model are not available.
+
+\subsection{Speaker Purity}
+
+To evaluate how well the ClusterModel is at separating speakers, we calculate the purity of the speakers.
+For each speaker, we assign the cluster that the plurality of their utterances are assigned to.
+The purity is then the fraction of utterances that map to the plurality cluster.
+Table \ref{tab:speaker_purity} shows the purity of the speakers in the test-clean partition of LibriSpeech.
+In general, these very high purities indicate that the clusters are meaningful in terms of speaker identity.
+Speakers are mostly being assigned to a single cluster, and thus to a single LoRA adapter.
+This should allow each LoRA adapter to specialize on their partition effectively.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Model} &average purity & speakers w/ purity = 1.0\\
+    ClusterModel(K=4) & 0.922 & 19/40 \\
+    ClusterModel(K=8) & 0.874 & 13/40 \\
+    ClusterModel(K=12) & 0.801 & 7/40 \\
+    \bottomrule
+  \end{tabular}
+  \caption{
+    Speaker purity of the ClusterModel on the LibriSpeech test-clean partition.
+  }
+  \label{tab:speaker_purity}
+\end{table}
+
 
 \subsection{Per-Speaker Performance}
 
 Since the proposed AttentionLoRA and ClusterModel models are designed to be speaker-dependent,
-we provide a brief analysis on per-speaker performance to better understand these systems.
+We provide a brief qualitative analysis on per-speaker performance to better understand these systems.
 
-\begin{figure}[h]
+\begin{figure*}[t!]
       \centering
-      \includegraphics[width=0.45\textwidth]{figures/wer_delta.png}
-      \caption{Difference in WER between ClusterModels and Wav2Vec 2.0 by speaker on LibriSpeech test-clean.
-        Blue dots are the ClusterModel with $K=4$, and orange dots are the ClusterModel with $K=8$.
-      The horizontal blue line represents 0, no difference in WER.}
+      \includegraphics[width=\textwidth]{figures/wer_delta.png}
+      \caption{Difference in WER between ClusterModels and wav2vec 2.0 by speaker on LibriSpeech test-clean.
+      The horizontal blue line represents 0, no difference in WER.
+      Speakers are ordered along the x axis by the number of utterances they have in the test set.
+    Points below the line indicate that the ClusterModel performed better than wav2vec 2.0 on that speaker.
+  }
       \label{fig:wer_delta}
-\end{figure}
+\end{figure*}
 
 
-Figure \ref{TODO} shows the change in WER by speaker, between the original base wav2vec 2.0 model and the ClusterModel(K=4) model.
+Figure \ref{fig:wer_delta} shows the change in WER by speaker, between the original base wav2vec 2.0 model and the ClusterModel(K=4) model.
+We can see that for most of the speakers, they experience a higher erorr rate on the ClusterModel compared to the base wav2vec 2.0 (points above the blue line).
+There are a few speakers that benefit from the ClusterModels, either $K=4$ or $K=8$, though improvements are minimal, with none surpassing 0.5\% absolute reduction.
+There does not appear to be a significant relationship between the number of data instances of a speaker and the impact of the ClusterModel on their WER.

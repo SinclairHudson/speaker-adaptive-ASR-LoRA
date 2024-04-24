@@ -8,7 +8,7 @@ from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 from peft import LoraConfig
 from hyperparams import HyperparamsK8
 
-K=8
+K=12
 
 hyperparams = HyperparamsK8()
 dataset_split = "train.clean.100"

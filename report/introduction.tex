@@ -1,28 +1,43 @@
 \section{Introduction}
+\label{sec:introduction}
 
-Recently, automatic speech recognition (ASR) systems have achieved impressive results benchmark datasets such as LibriSpeech \cite{librispeech} and TIMIT \cite{timit}.
-These systems are typically trained first in an unsupervised manner on a large corpus of audio data, and then fine-tuned on a smaller supervised dataset \cite{wav2vec2, TODO}.
-Both the unsupervised and supervised training data contain a wide variety of speakers, with all speakers treated equally during training.
+Automatic Speech Recognition (ASR) is the task of transcribing spoken language audio into text.
+Recently, ASR systems have achieved impressive results benchmark datasets such as LibriSpeech \cite{librispeech} and TIMIT \cite{timit}.
+These systems often use an acoustic model (AM) to produce a transcription (a sequence of tokens) from an audio signal, and a language model (LM) to refine the transcription.
+This work focused on the acoustic model, and considers language models for refining the output to be out of scope.
+
+A common strategy for building ASR acoustic models is to first learn meaningful \textit{representations} of the speech audio data, using self-supervised learning (SSL) or semi-supervised learning techniques \cite{hubert, npc, conformerxll}.
+Models that produce these representations are then extended with an ASR prediction head on a supervised dataset \cite{wav2vec2, conformerxll}.
+
+This strategy of representation learning is extremely popular because it avoids the need for large amounts of task-specific labelled data \cite{wav2vec}.
+These representations have been shown to be a great starting point for supervised learning systems, since they are rich with information about the speech audio \cite{comparative, layerwise}.
+The SUPERB benchmark evaluates the usefulness of these learned features on many tasks, including ASR, speaker diarization, speaker identification, and keyword spotting \cite{superb}.
+Note that not all of these tasks are related to transcribing speech audio into text; some require that the representations contain speaker identity information.
+While highly effective, these models based on representation learning are often very large, with some models reaching 1 billion parameters \cite{conformerxll}.
+
+%Representation learning is so prominent, the SUPERB benchmark is dedicated to evaluating learned representations for spoken language processing tasks.
+
 \subsection{Motivation}
 
 During testing, the performance of these systems can vary significantly depending on the speaker.
-As shown in Figure \ref{fig:by_speaker}, word error rate with some speakers having double the Word Error Rate (WER) when compared to others.
-These variations could be attributed to the different speaking styles, accents, or recording conditions of the speakers.
+As shown in Figure \ref{fig:by_speaker}, some speakers in the LibriSpeech dataset can have double the Word Error Rate (WER) when compared to others.
+These variations could be attributed to the different speaking styles, speeds, accents, or recording conditions of the speakers.
 
 \begin{figure}[h]
       \centering
       \includegraphics[width=0.45\textwidth]{figures/wer_by_speaker.png}
       \caption{
           Word Error Rate (WER) of wav2vec 2.0 by speaker on LibriSpeech test-clean.
-          The horizontal blue line represents the average WER across all speakers.
+          Speakers are sorted along the x axis by the number of utterances they have in the test set.
+          The horizontal blue line represents the WER across all speakers.
           Variance in WER increases as the number of utterances per speaker decreases.
   }
       \label{fig:by_speaker}
 \end{figure}
 
-As shown in the work of \cite{childspeech}, when a pre-trained model's performance performs poorly on a specific type of speaker, 
-it is possible to improve performance by fine-tuning the model on data instances from that specific type of speaker.
-This leads us to the hypothesis that speaker-dependent models can outperform speaker-independent models on a per-speaker basis.
+As shown in the work of Liu et al., when a pre-trained model performs poorly on a specific type of speaker, 
+it is possible to improve performance by fine-tuning the model on data instances from that specific type of speaker \cite{childspeech}.
+This leads us to the hypothesis that speaker-dependent models can outperform speaker-independent models, for specific speakers and perhaps in general.
 In this paper, we explore two research questions:
 \textbf{RQ1}: Can we improve the performance of an ASR system by incorporating speaker identity information?
 \textbf{RQ2}: Can an ASR system learn modes of the data and model them independently, to improve performance both on average and in under-represented modes?

@@ -1,6 +1,11 @@
 \section{Conclusion}
 
 While some speakers may benefit ever so slightly from the proposed ClusterModel, the overall performance of the model is slightly worse than the base wav2vec 2.0 model.
+Some speakers benefit minimally from the division of the data into clusters, but the majority of speakers do not.
 It is likely that large models like wav2vec 2.0 have the capacity to learn speaker-specific features, and that the proposed clustering approach is not necessary.
+For \textbf{RQ1}, initial results point to no; incorporating speaker identity information into ASR systems does not improve performance.
+For \textbf{RQ2}, a conclusion cannot be drawn.
+The proposed AttentionLoRA model proved very difficult to train, and did not outperform the base wav2vec 2.0 model.
+These results show that it is difficult to learn both different modes of the data and mode-specific parameters jointly, and perhaps a two-stage training approach would be more effective.
 
 
